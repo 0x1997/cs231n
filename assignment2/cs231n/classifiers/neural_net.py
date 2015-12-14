@@ -80,17 +80,20 @@ def two_layer_net(X, model, y=None, reg=0.0):
   # Store the result in the scores variable, which should be an array of      #
   # shape (N, C).                                                             #
   #############################################################################
-  pass
+  l1 = X.dot(W1) + b1  # N x H
+  l1a = l1 * (l1 > 0)
+  l2 = l1a.dot(W2) + b2  # N x C
+  scores = l2
   #############################################################################
   #                              END OF YOUR CODE                             #
   #############################################################################
-  
+
   # If the targets are not given then jump out, we're done
   if y is None:
     return scores
 
   # compute the loss
-  loss = None
+  loss = 0.0
   #############################################################################
   # TODO: Finish the forward pass, and compute the loss. This should include  #
   # both the data loss and L2 regularization for W1 and W2. Store the result  #
@@ -98,7 +101,10 @@ def two_layer_net(X, model, y=None, reg=0.0):
   # classifier loss. So that your results match ours, multiply the            #
   # regularization loss by 0.5                                                #
   #############################################################################
-  pass
+  f_exp = np.exp(scores)   # N x C
+  f_exp_sum = f_exp.sum(axis=1)   # N
+  loss += np.mean(-scores[xrange(N), y] + np.log(f_exp_sum))
+  loss += 0.5 * reg * ((W1*W1).sum() + (W2*W2).sum())
   #############################################################################
   #                              END OF YOUR CODE                             #
   #############################################################################
@@ -110,7 +116,24 @@ def two_layer_net(X, model, y=None, reg=0.0):
   # and biases. Store the results in the grads dictionary. For example,       #
   # grads['W1'] should store the gradient on W1, and be a matrix of same size #
   #############################################################################
-  pass
+  dloss = 1.0
+  dl2 = f_exp / f_exp_sum.reshape(-1, 1)
+  dl2[xrange(N), y] -= 1
+  dl2 /= N
+  dl2 *= dloss    # N x C
+
+  dl1a = dl2.dot(W2.T)   # N x C . (H x C).T => N x H
+  dl1 = dl1a * (l1 > 0)
+  dW2 = l1a.T.dot(dl2) + reg * W2   # (N x H).T . N x C => H x C
+  db2 = dl2.sum(axis=0)   # N x C => C
+
+  dW1 = X.T.dot(dl1) + reg * W1   #  (N x D).T . N x H => D x H
+  db1 = dl1.sum(axis=0)   # N x H => H
+
+  grads['W1'] = dW1
+  grads['W2'] = dW2
+  grads['b1'] = db1
+  grads['b2'] = db2
   #############################################################################
   #                              END OF YOUR CODE                             #
   #############################################################################
